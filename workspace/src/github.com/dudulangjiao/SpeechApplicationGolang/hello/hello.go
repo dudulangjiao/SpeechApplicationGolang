@@ -83,21 +83,10 @@ func EightBitAdder(inputFirst, inputSecond string) (byte, string) {
 }
 
 // 门锁 Gated Latch
-type GatedLatch struct {
-	DataInput, WriteEnable, returnCircuit byte
-}
-
-func NewGatedLatch() *GatedLatch {
-	var result = new(GatedLatch)
-	result.returnCircuit = '0'
-	return result
-}
-
-func (g *GatedLatch) ReadWrite() byte {
-	a := Or(And(g.DataInput, g.WriteEnable), g.returnCircuit)
-	b := Not(And(Not(g.DataInput), g.WriteEnable))
+func GatedLatch(DataInput, WriteEnable, returnCircuit byte) byte {
+	a := Or(And(DataInput, WriteEnable), returnCircuit)
+	b := Not(And(Not(DataInput), WriteEnable))
 	c := And(a, b)
-	g.returnCircuit = c
 	return c
 }
 
@@ -121,28 +110,78 @@ func (e *EightBitRegister) ReadWrite() string {
 	result := "00000000"
 	resultByte := []byte(result)
 	for i := 0; i < 8; i++ {
-		a := Or(And(DataInputByte[i], e.WriteEnable), e.returnCircuit[i])
-		b := Not(And(Not(DataInputByte[i]), e.WriteEnable))
-		resultByte[i] = And(a, b)
+		resultByte[i] = GatedLatch(DataInputByte[i], e.WriteEnable,
+			e.returnCircuit[i])
 		e.returnCircuit[i] = resultByte[i]
 	}
 	result = string(resultByte)
 	return result
 }
 
+// 矩阵型门锁
+func MatrixGatedLatch(RowWire, ColumnWire, DataInOut, WriteEnable,
+	ReadEnable, returnCircuit byte) [2]byte {
+	a := And(RowWire, ColumnWire)
+	b := GatedLatch(DataInOut, And(a, WriteEnable), returnCircuit)
+	cInput := And(a, ReadEnable)
+	d := And(b, cInput)
+	ddd := [2]byte{b, d}
+	return ddd
+}
+
+type MatrixGatedLatchObject struct {
+	returnCircuit byte
+}
+
+func NewMatrixGatedLatch() *MatrixGatedLatchObject {
+	var result = new(MatrixGatedLatchObject)
+	result.returnCircuit = '0'
+	return result
+}
+
+func (m *MatrixGatedLatchObject) ReadWrite(RowWire, ColumnWire,
+	DataInOut, WriteEnable, ReadEnable byte) byte {
+	y := MatrixGatedLatch(RowWire, ColumnWire, DataInOut,
+		WriteEnable, ReadEnable, m.returnCircuit)
+	m.returnCircuit = y[0]
+	fmt.Println("RowWire:", string(RowWire),
+		"ColumnWire:", string(ColumnWire),
+		"WriteEnable:", string(WriteEnable),
+		"ReadEnable:", string(ReadEnable),
+		"DataInOut:", string(DataInOut),
+		"returnCircuit:", string(y[0]))
+	fmt.Println("DataInOut:", string(y[1]))
+	return y[1]
+}
+
+/*
+// 256位内存 256-BIT Memory
+type TwoHundredFiftySixBitMemory struct {
+	WriteEnable   byte
+	ReadEnable    byte
+	Data          string
+	EightBitAddress string  // 8位地址，定位每个门锁
+	returnCircuit [256]byte  // 256个门锁的回向电路值
+}
+
+func New256BitMemory() *TwoHundredFiftySixBitMemory {
+	var result = new(TwoHundredFiftySixBitMemory)
+	for i := 0; i < 256; i++ {
+		result.returnCircuit[i] = '0'
+	}
+	return result
+}
+
+func (t *TwoHundredFiftySixBitMemory) ReadWrite() string {
+	t.
+	return result
+}
+*/
 func main() {
 
 	dd1 := "01011110"
 	dd2 := "11110001"
 	fmt.Println(EightBitAdder(dd1, dd2))
-
-	fmt.Println("\n门锁")
-	w := NewGatedLatch()
-	// 1 "00" "0"
-	w.DataInput = '0'
-	w.WriteEnable = '0'
-	fmt.Println("Input:", w.DataInput, "Write:", w.WriteEnable,
-		"---Result:", w.ReadWrite())
 
 	fmt.Println("\n8位寄存器")
 	ww := NewEightBitRegister()
@@ -153,21 +192,26 @@ func main() {
 	fmt.Println("Input:", ww.DataInput, "Write:",
 		string(ww.WriteEnable), "---Result:", ww.ReadWrite())
 
-	// 2 Input:"00011001" WriteEnable:'1' Result:"00011001"
-	ww.DataInput = "00011001"
-	ww.WriteEnable = '1'
-	fmt.Println("Input:", ww.DataInput, "Write:",
-		string(ww.WriteEnable), "---Result:", ww.ReadWrite())
+	fmt.Println("\n矩阵型门锁")
+	juzhen := NewMatrixGatedLatch()
 
-	// 3 Input:"00011001" WriteEnable:'0' Result:"00011001"
-	ww.DataInput = "00011001"
-	ww.WriteEnable = '0'
-	fmt.Println("Input:", ww.DataInput, "Write:",
-		string(ww.WriteEnable), "---Result:", ww.ReadWrite())
+	// 1 RC:11 WriteRead:00 DAtaInOut:0
+	juzhen.ReadWrite('1', '1',
+		'0', '0', '0')
 
-	// 4 Input:"11111001" WriteEnable:'0' Result:"00011001"
-	ww.DataInput = "11111001"
-	ww.WriteEnable = '1'
-	fmt.Println("Input:", ww.DataInput, "Write:",
-		string(ww.WriteEnable), "---Result:", ww.ReadWrite())
+	// 2 RC:11 WriteRead:10 DAtaInOut:1
+	juzhen.ReadWrite('1', '1',
+		'1', '1', '1')
+
+	// 3 RC:11 WriteRead:01 DAtaInOut:0
+	juzhen.ReadWrite('1', '1',
+		'1', '0', '1')
+
+	// 4 RC:11 WriteRead:10 DAtaInOut:1
+	juzhen.ReadWrite('1', '1',
+		'1', '1', '0')
+
+	// 5 RC:01 WriteRead:00 DAtaInOut:0
+	juzhen.ReadWrite('1', '1',
+		'0', '1', '0')
 }
