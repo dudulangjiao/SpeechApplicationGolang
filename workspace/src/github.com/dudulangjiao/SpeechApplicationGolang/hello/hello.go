@@ -4,45 +4,45 @@ package main
 import "fmt"
 
 // NOT逻辑门
-func Not(input string) string {
+func Not(input byte) byte {
 	switch input {
 	case '1':
 		return '0'
 	case '0':
 		return '1'
 	default:
-		return "error"
+		return 'e'
 	}
 }
 
 // AND逻辑门
-func And(inputFirst, inputSecond string) string {
-	z := inputFirst + inputSecond
+func And(inputFirst, inputSecond byte) byte {
+	z := string(inputFirst) + string(inputSecond)
 	switch z {
 	case "11":
-		return "1"
+		return '1'
 	case "01", "10", "00":
-		return "0"
+		return '0'
 	default:
-		return "error"
+		return 'e'
 	}
 }
 
 // OR逻辑门
-func Or(inputFirst, inputSecond string) string {
-	z := inputFirst + inputSecond
+func Or(inputFirst, inputSecond byte) byte {
+	z := string(inputFirst) + string(inputSecond)
 	switch z {
 	case "11", "01", "10":
-		return "1"
+		return '1'
 	case "00":
-		return "0"
+		return '0'
 	default:
-		return "error"
+		return 'e'
 	}
 }
 
 // XOR逻辑门 或 一位加法器
-func XOr(inputFirst, inputSecond string) string {
+func XOr(inputFirst, inputSecond byte) byte {
 	and := And(inputFirst, inputSecond)
 	notAnd := Not(and)
 	or := Or(inputFirst, inputSecond)
@@ -51,14 +51,14 @@ func XOr(inputFirst, inputSecond string) string {
 }
 
 // 半加器
-func HalfAdder(inputFirst, inputSecond string) (string, string) {
+func HalfAdder(inputFirst, inputSecond byte) (byte, byte) {
 	sum := XOr(inputFirst, inputSecond)
 	carry := And(inputFirst, inputSecond)
 	return carry, sum
 }
 
 // 全加器
-func FullAdder(inputFirst, inputSecond, inputThird string) (string, string) {
+func FullAdder(inputFirst, inputSecond, inputThird byte) (byte, byte) {
 	c1, s := HalfAdder(inputFirst, inputSecond)
 	c2, sum := HalfAdder(s, inputThird)
 	carry := Or(c1, c2)
@@ -66,28 +66,34 @@ func FullAdder(inputFirst, inputSecond, inputThird string) (string, string) {
 }
 
 // 8位加法器
-func EightBitAdder(inputFirst, inputSecond [8]string) (string, [8]string) {
-	var output [8]string
-	var carry string
-	carry, output[7] = HalfAdder(inputFirst[7], inputSecond[7])
+func EightBitAdder(inputFirst, inputSecond string) (byte, string) {
+	output := "00000000"
+	outputByte := []byte(output)
+	var carry byte
+	inputFirstByte := []byte(inputFirst)
+	inputSecondByte := []byte(inputSecond)
+	carry, outputByte[7] = HalfAdder(inputFirstByte[7],
+		inputSecondByte[7])
 	for i := 6; i >= 0; i-- {
-		carry, output[i] = FullAdder(carry, inputFirst[i], inputSecond[i])
+		carry, outputByte[i] = FullAdder(carry, inputFirst[i],
+			inputSecond[i])
 	}
+	output = string(outputByte)
 	return carry, output
 }
 
 // 门锁 Gated Latch
 type GatedLatch struct {
-	DataInput, WriteEnable, returnCircuit string
+	DataInput, WriteEnable, returnCircuit byte
 }
 
 func NewGatedLatch() *GatedLatch {
 	var result = new(GatedLatch)
-	result.returnCircuit = "0"
+	result.returnCircuit = '0'
 	return result
 }
 
-func (g *GatedLatch) ReadWrite() string {
+func (g *GatedLatch) ReadWrite() byte {
 	a := Or(And(g.DataInput, g.WriteEnable), g.returnCircuit)
 	b := Not(And(Not(g.DataInput), g.WriteEnable))
 	c := And(a, b)
@@ -97,61 +103,71 @@ func (g *GatedLatch) ReadWrite() string {
 
 // 8位寄存器 8-BIT Register
 type EightBitRegister struct {
-	WriteEnable   string
+	WriteEnable   byte
 	DataInput     string
-	returnCircuit [8]string
+	returnCircuit [8]byte
 }
 
 func NewEightBitRegister() *EightBitRegister {
 	var result = new(EightBitRegister)
 	for i := 0; i < 8; i++ {
-		result.returnCircuit[i] = "0"
+		result.returnCircuit[i] = '0'
 	}
 	return result
 }
 
 func (e *EightBitRegister) ReadWrite() string {
 	DataInputByte := []byte(e.DataInput)
-	var result string
+	result := "00000000"
+	resultByte := []byte(result)
 	for i := 0; i < 8; i++ {
 		a := Or(And(DataInputByte[i], e.WriteEnable), e.returnCircuit[i])
 		b := Not(And(Not(DataInputByte[i]), e.WriteEnable))
-		result[i] = And(a, b)
-		e.returnCircuit[i] = result[i]
+		resultByte[i] = And(a, b)
+		e.returnCircuit[i] = resultByte[i]
 	}
+	result = string(resultByte)
 	return result
 }
 
 func main() {
-	q := "1"
-	b := "1"
-	v := "0"
-	fmt.Println(And(q, b))
-	fmt.Println(Not(q))
-	fmt.Println(XOr(q, b))
-	fmt.Println(HalfAdder(q, b))
-	fmt.Println(FullAdder(q, b, v))
-	dd1 := [8]string{"0", "1", "0", "1", "1", "1", "1", "0"}
-	dd2 := [8]string{"1", "1", "1", "0", "1", "0", "1", "1"}
+
+	dd1 := "01011110"
+	dd2 := "11110001"
 	fmt.Println(EightBitAdder(dd1, dd2))
 
 	fmt.Println("\n门锁")
 	w := NewGatedLatch()
 	// 1 "00" "0"
-	w.DataInput = "0"
-	w.WriteEnable = "0"
+	w.DataInput = '0'
+	w.WriteEnable = '0'
 	fmt.Println("Input:", w.DataInput, "Write:", w.WriteEnable,
 		"---Result:", w.ReadWrite())
 
 	fmt.Println("\n8位寄存器")
-	w := NewEightBitRegister()
-	// 1 "00011001" "00011001"
-	f := "00011001"
-	for value := range f {
-		w.DataInput
-	}
-	w.DataInput = "0"
-	w.WriteEnable = "0"
-	fmt.Println("Input:", w.DataInput, "Write:", w.WriteEnable,
-		"---Result:", w.ReadWrite())
+	ww := NewEightBitRegister()
+
+	// 1 Input:"00011001" WriteEnable:'0' Result:"00000000"
+	ww.DataInput = "00011001"
+	ww.WriteEnable = '0'
+	fmt.Println("Input:", ww.DataInput, "Write:",
+		string(ww.WriteEnable), "---Result:", ww.ReadWrite())
+
+	// 2 Input:"00011001" WriteEnable:'1' Result:"00011001"
+	ww.DataInput = "00011001"
+	ww.WriteEnable = '1'
+	fmt.Println("Input:", ww.DataInput, "Write:",
+		string(ww.WriteEnable), "---Result:", ww.ReadWrite())
+
+	// 3 Input:"00011001" WriteEnable:'0' Result:"00011001"
+	ww.DataInput = "00011001"
+	ww.WriteEnable = '0'
+	fmt.Println("Input:", ww.DataInput, "Write:",
+		string(ww.WriteEnable), "---Result:", ww.ReadWrite())
+
+	// 4 Input:"11111001" WriteEnable:'0' Result:"00011001"
+	ww.DataInput = "11111001"
+	ww.WriteEnable = '1'
+	fmt.Println("Input:", ww.DataInput, "Write:",
+		string(ww.WriteEnable), "---Result:", ww.ReadWrite())
 }
