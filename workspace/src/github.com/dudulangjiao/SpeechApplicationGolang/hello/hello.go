@@ -123,13 +123,12 @@ func (e *EightBitRegister) ReadWrite() string {
 
 // 矩阵型门锁
 func MatrixGatedLatch(RowWire, ColumnWire, DataInOut, WriteEnable,
-	ReadEnable, returnCircuit byte) [2]byte {
+	ReadEnable, returnCircuit byte) (byte, byte) {
 	a := And(RowWire, ColumnWire)
-	b := GatedLatch(DataInOut, And(a, WriteEnable), returnCircuit)
+	storedValue := GatedLatch(DataInOut, And(a, WriteEnable), returnCircuit)
 	cInput := And(a, ReadEnable)
-	d := And(b, cInput)
-	ddd := [2]byte{b, d}
-	return ddd
+	output := And(storedValue, cInput)
+	return storedValue, output
 }
 
 type MatrixGatedLatchObject struct {
@@ -143,21 +142,23 @@ func NewMatrixGatedLatch() *MatrixGatedLatchObject {
 }
 
 func (m *MatrixGatedLatchObject) ReadWrite(RowWire, ColumnWire,
-	DataInOut, WriteEnable, ReadEnable byte) byte {
-	y := MatrixGatedLatch(RowWire, ColumnWire, DataInOut,
+	DataInOut, WriteEnable, ReadEnable byte) (byte, byte) {
+	storedValue, output := MatrixGatedLatch(RowWire, ColumnWire, DataInOut,
 		WriteEnable, ReadEnable, m.returnCircuit)
-	m.returnCircuit = y[0]
-	fmt.Println("RowWire:", string(RowWire),
-		"ColumnWire:", string(ColumnWire),
-		"WriteEnable:", string(WriteEnable),
-		"ReadEnable:", string(ReadEnable),
-		"DataInOut:", string(DataInOut),
-		"returnCircuit:", string(y[0]))
-	fmt.Println("DataInOut:", string(y[1]))
-	return y[1]
+	m.returnCircuit = storedValue
+	/*
+		fmt.Println("RowWire:", string(RowWire),
+			"ColumnWire:", string(ColumnWire),
+			"WriteEnable:", string(WriteEnable),
+			"ReadEnable:", string(ReadEnable),
+			"DataInOut:", string(DataInOut),
+			"returnCircuit:", string(storedValue))
+		fmt.Println("DataInOut:", string(output))
+	*/
+	return storedValue, output
 }
 
-// 256位内存 256-BIT Memory
+// 256个门锁集合
 type TwoHundredFiftySixBitMemory struct {
 	// 256个门锁集合
 	MatrixGatedLatchSet [16][16]MatrixGatedLatchObject
@@ -167,20 +168,29 @@ func New256BitMemory() *TwoHundredFiftySixBitMemory {
 	var result = new(TwoHundredFiftySixBitMemory)
 	for i := 0; i < 16; i++ {
 		for j := 0; j < 16; j++ {
-			result.MatrixGatedLatchSet[i][j].returnCircuit = '0'
+			result.MatrixGatedLatchSet[i][j] = *NewMatrixGatedLatch()
 		}
 	}
 	return result
 }
 
 func (t *TwoHundredFiftySixBitMemory) ReadWrite(Data, WriteEnable,
-	ReadEnable byte, EightBitAddress string) byte {
-	rowAddress, _ := strconv.Atoi(EightBitAddress[0:4])
-	columnAddress, _ := strconv.Atoi(EightBitAddress[4:8])
-	result := t.MatrixGatedLatchSet[rowAddress][columnAddress].
+	ReadEnable byte, EightBitAddress string) (byte, byte) {
+	rowAddress, _ := strconv.ParseInt(EightBitAddress[0:4],
+		2, 10)
+
+	columnAddress, _ := strconv.ParseInt(EightBitAddress[4:8],
+		2, 10)
+
+	storedValue, output := t.MatrixGatedLatchSet[rowAddress][columnAddress].
 		ReadWrite('1', '1', Data, WriteEnable,
 			ReadEnable)
-	return result
+	fmt.Println("EightBitAddress:", EightBitAddress,
+		"WriteEnable:", string(WriteEnable),
+		"ReadEnable:", string(ReadEnable),
+		"Data:", string(Data), "storedValue:", string(storedValue))
+
+	return storedValue, output
 }
 
 // 8位可寻址内存 EightBitAddressableMemory
@@ -204,52 +214,81 @@ func NewEightBitAddressableMemory() *EightBitAddressableMemory {
 }
 
 func (a *EightBitAddressableMemory) ReadWrite(WriteEnable,
-	ReadEnable byte, EightBitData, EightBitAddress string) string {
+	ReadEnable byte, EightBitData,
+	EightBitAddress string) (string, string) {
 	m := []byte(EightBitData)
 	result := "00000000"
+	storeValue := "00000000"
 	resultByte := []byte(result)
+	storeValueByte := []byte(storeValue)
 	for i := 0; i < 8; i++ {
-		resultByte[i] = a.TwoHundredFiftySixBitMemorySet[i].
+		storeValueByte[i], resultByte[i] = a.TwoHundredFiftySixBitMemorySet[i].
 			ReadWrite(m[i], WriteEnable, ReadEnable, EightBitAddress)
 	}
 	result = string(resultByte)
-	return result
+	storeValue = string(storeValueByte)
+	return storeValue, result
 }
 
 func main() {
-	dd1 := "01011110"
-	dd2 := "11110001"
-	fmt.Println(EightBitAdder(dd1, dd2))
+	/*
+		Address := "00011110"
+		rowAddress, _ := strconv.ParseInt(Address[0:4],  2,
+			10)
+		columnAddress, _ := strconv.ParseInt(Address[4:8], 2,
+			10)
+		fmt.Println(rowAddress)
+		fmt.Println(columnAddress)
 
-	fmt.Println("\n8位寄存器")
-	ww := NewEightBitRegister()
+		dd1 := "01011110"
+		dd2 := "11110001"
+		fmt.Println("8位加法器")
+		fmt.Println(EightBitAdder(dd1, dd2))
 
-	// 1 Input:"00011001" WriteEnable:'0' Result:"00000000"
-	ww.DataInput = "00011001"
-	ww.WriteEnable = '0'
-	fmt.Println("Input:", ww.DataInput, "Write:",
-		string(ww.WriteEnable), "---Result:", ww.ReadWrite())
+		fmt.Println("\n8位寄存器")
+		ww := NewEightBitRegister()
 
-	fmt.Println("\n矩阵型门锁")
-	juzhen := NewMatrixGatedLatch()
+		// 1 Input:"00011001" WriteEnable:'0' Result:"00000000"
+		ww.DataInput = "00011001"
+		ww.WriteEnable = '0'
+		fmt.Println("Input:", ww.DataInput, "Write:",
+			string(ww.WriteEnable), "---Result:", ww.ReadWrite())
 
-	// 1 RC:11 WriteRead:00 DAtaInOut:0
-	juzhen.ReadWrite('1', '1',
-		'0', '0', '0')
+		fmt.Println("\n矩阵型门锁")
+		juzhen := NewMatrixGatedLatch()
 
-	// 2 RC:11 WriteRead:10 DAtaInOut:1
-	juzhen.ReadWrite('1', '1',
-		'0', '1', '1')
+		// 1 RC:11 WriteRead:00 DAtaInOut:0
+		juzhen.ReadWrite('1', '1',
+			'0', '0', '0')
 
-	// 3 RC:11 WriteRead:01 DAtaInOut:0
-	juzhen.ReadWrite('1', '1',
-		'1', '0', '1')
+		hhhh := New256BitMemory()
+		_, hul := hhhh.ReadWrite('1', '1', '0',
+			"00111101")
+		fmt.Println("\n256位内存")
+		fmt.Println(hul)
+	*/
+	ffff := NewEightBitAddressableMemory()
+	sss, yyy := ffff.ReadWrite('1', '0',
+		"11110001", "11000110")
+	fmt.Println("\n8位可寻址内存")
 
-	// 4 RC:11 WriteRead:10 DAtaInOut:1
-	juzhen.ReadWrite('1', '1',
-		'1', '1', '0')
+	fmt.Println("storeValue:", sss, "output:", yyy)
 
-	// 5 RC:01 WriteRead:00 DAtaInOut:0
-	juzhen.ReadWrite('1', '1',
-		'0', '1', '0')
+	sss, yyy = ffff.ReadWrite('0', '1',
+		"00000001", "11000110")
+	fmt.Println("\n8位可寻址内存")
+
+	fmt.Println("storeValue:", sss, "output:", yyy)
+
+	sss, yyy = ffff.ReadWrite('1', '1',
+		"00000001", "11000110")
+	fmt.Println("\n8位可寻址内存")
+
+	fmt.Println("storeValue:", sss, "output:", yyy)
+
+	sss, yyy = ffff.ReadWrite('0', '0',
+		"00000001", "11000110")
+	fmt.Println("\n8位可寻址内存")
+
+	fmt.Println("storeValue:", sss, "output:", yyy)
 }
