@@ -1,7 +1,10 @@
 // 从零开始模拟计算机的逻辑单元
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // NOT逻辑门
 func Not(input byte) byte {
@@ -154,31 +157,66 @@ func (m *MatrixGatedLatchObject) ReadWrite(RowWire, ColumnWire,
 	return y[1]
 }
 
-/*
 // 256位内存 256-BIT Memory
 type TwoHundredFiftySixBitMemory struct {
-	WriteEnable   byte
-	ReadEnable    byte
-	Data          string
-	EightBitAddress string  // 8位地址，定位每个门锁
-	returnCircuit [256]byte  // 256个门锁的回向电路值
+	// 256个门锁集合
+	MatrixGatedLatchSet [16][16]MatrixGatedLatchObject
 }
 
 func New256BitMemory() *TwoHundredFiftySixBitMemory {
 	var result = new(TwoHundredFiftySixBitMemory)
-	for i := 0; i < 256; i++ {
-		result.returnCircuit[i] = '0'
+	for i := 0; i < 16; i++ {
+		for j := 0; j < 16; j++ {
+			result.MatrixGatedLatchSet[i][j].returnCircuit = '0'
+		}
 	}
 	return result
 }
 
-func (t *TwoHundredFiftySixBitMemory) ReadWrite() string {
-	t.
+func (t *TwoHundredFiftySixBitMemory) ReadWrite(Data, WriteEnable,
+	ReadEnable byte, EightBitAddress string) byte {
+	rowAddress, _ := strconv.Atoi(EightBitAddress[0:4])
+	columnAddress, _ := strconv.Atoi(EightBitAddress[4:8])
+	result := t.MatrixGatedLatchSet[rowAddress][columnAddress].
+		ReadWrite('1', '1', Data, WriteEnable,
+			ReadEnable)
 	return result
 }
-*/
-func main() {
 
+// 8位可寻址内存 EightBitAddressableMemory
+type EightBitAddressableMemory struct {
+	// 8个256位内存
+	TwoHundredFiftySixBitMemorySet [8]TwoHundredFiftySixBitMemory
+}
+
+func NewEightBitAddressableMemory() *EightBitAddressableMemory {
+	var result = new(EightBitAddressableMemory)
+	for i := 0; i < 8; i++ {
+		for j := 0; j < 16; j++ {
+			for k := 0; k < 16; k++ {
+				result.TwoHundredFiftySixBitMemorySet[i].
+					MatrixGatedLatchSet[j][k].returnCircuit = '0'
+			}
+
+		}
+	}
+	return result
+}
+
+func (a *EightBitAddressableMemory) ReadWrite(WriteEnable,
+	ReadEnable byte, EightBitData, EightBitAddress string) string {
+	m := []byte(EightBitData)
+	result := "00000000"
+	resultByte := []byte(result)
+	for i := 0; i < 8; i++ {
+		resultByte[i] = a.TwoHundredFiftySixBitMemorySet[i].
+			ReadWrite(m[i], WriteEnable, ReadEnable, EightBitAddress)
+	}
+	result = string(resultByte)
+	return result
+}
+
+func main() {
 	dd1 := "01011110"
 	dd2 := "11110001"
 	fmt.Println(EightBitAdder(dd1, dd2))
@@ -201,7 +239,7 @@ func main() {
 
 	// 2 RC:11 WriteRead:10 DAtaInOut:1
 	juzhen.ReadWrite('1', '1',
-		'1', '1', '1')
+		'0', '1', '1')
 
 	// 3 RC:11 WriteRead:01 DAtaInOut:0
 	juzhen.ReadWrite('1', '1',
