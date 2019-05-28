@@ -36,6 +36,7 @@ func (m *MatrixGatedLatchObject) ReadWrite(RowWire, ColumnWire,
 	return storedValue, output
 }
 
+/*
 // 256个门锁集合
 type TwoHundredFiftySixGatedLatch struct {
 	// 256个门锁集合
@@ -104,6 +105,7 @@ func (a *EightBitAddressableMemory) ReadWrite(WriteEnable,
 	fmt.Println("storeValue:", storeValue, "DataInOut:", result)
 	return storeValue, result
 }
+*/
 
 // 16个门锁集合
 type SixteenGatedLatch struct {
@@ -169,7 +171,7 @@ func (a *FourBitAddressableMemory) ReadWrite(WriteEnable,
 	fmt.Println("\nWriteEnable:", string(WriteEnable),
 		"ReadEnable:", string(ReadEnable),
 		"EightBitData:", EightBitData,
-		"EightBitAddress:", FourBitAddress)
+		"FourBitAddress:", FourBitAddress)
 	fmt.Println("storeValue:", storeValue, "DataInOut:", result)
 	return storeValue, result
 }
