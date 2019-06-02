@@ -22,9 +22,9 @@ func NewCPU() *CPU {
 
 func (c *CPU) Execute() {
 	fmt.Println("循环开始")
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		// fetch phase 取指令阶段
-
+		fmt.Println(i)
 		InstAddr := c.Control.ReadInstAddr()
 		fmt.Println("*\n", InstAddr)
 		_, instruction := c.Ram.ReadWrite('0',
