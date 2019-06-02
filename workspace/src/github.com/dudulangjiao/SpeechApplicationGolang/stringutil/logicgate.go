@@ -1,5 +1,6 @@
 package stringutil
 
+// '0'表示False，'1'表示True
 // NOT逻辑门
 func Not(input byte) byte {
 	switch input {

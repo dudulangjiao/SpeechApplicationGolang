@@ -50,15 +50,46 @@ func FourBitAdder(inputFirst, inputSecond string) (byte, string) {
 	return carry, output
 }
 
+// 8位减法器 -128~127
+func EightBitSub(inputSecond, inputFirst string) (byte, string) {
+	output := "00000000"
+	outputByte := []byte(output)
+	inputSecondByte := []byte(inputSecond)
+	//fmt.Println("inputSecond", inputSecond)
+	//fmt.Println("inputSecondByte", inputSecondByte)
+	for i := 0; i < 8; i++ {
+		//fmt.Println("减法循环")
+		//fmt.Println(i)
+		//fmt.Println(inputSecondByte[i])
+		outputByte[i] = Not(inputSecondByte[i])
+		//fmt.Println("outputByte:", outputByte[i])
+	}
+	//fmt.Println("减法循环结束")
+	output = string(outputByte)
+	//fmt.Println(output)
+	_, a := EightBitAdder(inputFirst, output)
+	_, result := EightBitAdder(a, "00000001")
+	m := []byte(result)
+	return m[1], result
+}
+
 type ALU struct {
 }
 
-func (a *ALU) run(OpCode, Input1, Input2 string) string {
+func (a *ALU) run(OpCode, Input1, Input2 string) (Negative byte,
+	Output string) {
 	switch OpCode {
 	case "1000":
 		_, c := EightBitAdder(Input1, Input2)
-		return c
+		return '0', c
+	case "1001":
+		//fmt.Println("减法")
+		//fmt.Println("减数：", Input1)
+		//fmt.Println("被减数：", Input2)
+		m, c := EightBitSub(Input1, Input2)
+		//fmt.Println("减后结果：", c)
+		return m, c
 	default:
-		return "e"
+		return '0', "error"
 	}
 }
